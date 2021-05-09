@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 import { Grid, Button, Typography } from "@material-ui/core"
-import { Link } from "react-router-dom"
+
 
 export default class Room extends Component{
     constructor(props) {
@@ -9,15 +9,22 @@ export default class Room extends Component{
             votesToSkip:2,
             guestCanPause: false,
             isHost: false,
+            showSettings: false,
         };
         this.roomCode = this.props.match.params.roomCode;
         this.getRoomDetail ();
         this.leaveButtonPressed = this.leaveButtonPressed.bind(this);
+        this.updateShowSettings = this.updateShowSettings.bind(this);
     };
 
     getRoomDetail(){  
         fetch ("/api/room/detail/" + this.roomCode + "/" )
-        .then((response) => response.json())
+        .then((response) => {
+            if (!response.ok){
+                this.props.leaveRoomCallBack();
+                this.props.history.push('/')
+            }
+            return response.json()})
         .then((data) => {
             this.setState({
                 votesToSkip: data.votes_to_skip,
@@ -33,8 +40,32 @@ export default class Room extends Component{
             headers: {"content-type": "application/json"},
         };
         fetch ("/api/room/leave/", requestOptions)
+        .then((_response) =>{
+            this.props.leaveRoomCallBack();
+            this.props.history.push("/");
+        }
+        )}
 
+    updateShowSettings(value) {
+        this.setState({
+            showSettings: value,
+        });
     }
+
+    renderSettingsButton() {
+        return (
+            <Grid item xs = {12} align = "center">
+                <Button
+                    variant = "contained"
+                    color = "primary"
+                    onClick = {() => this.updateShowSettings(true)}
+                    >
+                    Settings
+                </Button>
+            </Grid>
+        )
+    }
+
     render(){
         return (
             <Grid container spacing = {1}>
@@ -58,8 +89,9 @@ export default class Room extends Component{
                         Host: {this.state.isHost.toString()}
                     </Typography>
                 </Grid>
+                {this.state.isHost ? this.renderSettingsButton() : null}
                 <Grid item xs = {12} align = "center">
-                    <Button variant= "contained" color = "secondary" to='/' component = {Link}>
+                    <Button variant= "contained" color = "secondary" onClick = {this.leaveButtonPressed}>
                         Leave Room
                     </Button>
 
