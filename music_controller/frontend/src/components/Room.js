@@ -1,5 +1,6 @@
 import React, { Component } from "react";
-import { Grid, Button, Typography } from "@material-ui/core"
+import { Grid, Button, Typography } from "@material-ui/core";
+import CreateRoomPage from "./CreateRoomPage";
 
 
 export default class Room extends Component{
@@ -10,11 +11,16 @@ export default class Room extends Component{
             guestCanPause: false,
             isHost: false,
             showSettings: false,
+            spotifyAuthenticated : false,
         };
         this.roomCode = this.props.match.params.roomCode;
         this.getRoomDetail ();
         this.leaveButtonPressed = this.leaveButtonPressed.bind(this);
         this.updateShowSettings = this.updateShowSettings.bind(this);
+        this.renderSettingsButton = this.renderSettingsButton.bind(this);
+        this.renderSettings = this.renderSettings.bind(this);
+        this.getRoomDetail = this.getRoomDetail.bind(this);
+        this.authenticateSpotify = this.authenticateSpotify.bind(this)
     };
 
     getRoomDetail(){  
@@ -31,8 +37,26 @@ export default class Room extends Component{
                 guestCanPause: data.guest_can_pause,
                 isHost: data.is_host,
             });
+            if(this.state.isHost){
+                this.authenticateSpotify();
+            }
         });
     };
+
+    authenticateSpotify(){
+        fetch("/spotify/is/authenticated/")
+        .then((response) => response.json())
+        .then((data) => {
+            this.setState({spotifyAuthenticated: data.status});
+            if(!data.status){
+                fetch("/spotify/get/auth/url/")
+                .then((response)=> response.json())
+                .then((data) =>{
+                    window.location.replace(data.url);
+                })
+            }
+        })
+    }
 
     leaveButtonPressed() {
         const requestOptions = {
@@ -52,6 +76,31 @@ export default class Room extends Component{
         });
     }
 
+    renderSettings() {
+        return (
+        <Grid container spacing = {1}>
+            <Grid item xs = {12} align = "center">
+                <CreateRoomPage
+                    update = {true}
+                    votesToSkip = {this.state.votesToSkip}
+                    guestCanPause = {this.state.guestCanPause}
+                    roomCode = {this.roomCode}
+                    updateCallback = {this.getRoomDetail}                    
+                    />
+            </Grid>
+            <Grid item xs = {12} align = "center">
+                <Button 
+                    variant = "contained"
+                    color = "secondary"
+                    onClick = {() => this.updateShowSettings(false)}
+                >
+                    Close
+                </Button>
+            </Grid>
+        </Grid> 
+        );
+    }
+
     renderSettingsButton() {
         return (
             <Grid item xs = {12} align = "center">
@@ -67,6 +116,9 @@ export default class Room extends Component{
     }
 
     render(){
+        if (this.state.showSettings) {
+            return this.renderSettings();
+        }
         return (
             <Grid container spacing = {1}>
                 <Grid item xs = {12} align = "center">

@@ -23,6 +23,3 @@ class Room(models.Model):
     class Meta:
         verbose_name = "Room"
         verbose_name_plural = "Rooms"
-
-
-# pre_save.connect(generate_unique_code, sender = Room)
