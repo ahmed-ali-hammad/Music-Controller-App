@@ -19,6 +19,7 @@ class Room(models.Model):
     votes_to_skip   = models.IntegerField(null = False, default = 1)
     created_at      = models.DateTimeField(auto_now_add = True)
     updated_at      = models.DateTimeField(auto_now = True)
+    current_song    = models.CharField(max_length = 50, null = True) 
 
     class Meta:
         verbose_name = "Room"

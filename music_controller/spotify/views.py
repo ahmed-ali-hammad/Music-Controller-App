@@ -52,10 +52,8 @@ def excute_spotify_api_request(session_id, endpoint, post_ = False, put_ = False
         post(SPOTIFY_BASE_URL + endpoint, headers = headers)
 
     if put_:
-        print(token.access_token)
-        response = put(SPOTIFY_BASE_URL + endpoint, headers = headers)
-        print(response)
-        print(response.json())
+        put(SPOTIFY_BASE_URL + endpoint, headers = headers)
+
 
     response = get (SPOTIFY_BASE_URL + endpoint, {} , headers = headers)
 
@@ -138,6 +136,15 @@ class IsAuthenticatedAPIView(APIView):
 
 
 class CurrentSongAPIView(APIView):
+
+    def update_room_song(self, room, song_id):
+        current_song = room.current_song
+
+        if current_song != song_id:
+            room.current_song = song_id
+            room.save(update_fields = ['current_song'])
+            votes = Votes.objects.filter(room = room).delete()
+
     def get(self, request):
 
         room_code = self.request.session['room_code']    
@@ -168,6 +175,9 @@ class CurrentSongAPIView(APIView):
                 artist_string += ", "
             name = artist['name']
             artist_string += name
+
+        votes = len(Vote.objects.filter(room = room, song_id = song_id))
+        votes_required = room.votes_to_skip
         
         song = {
             'title': item['name'],
@@ -176,12 +186,16 @@ class CurrentSongAPIView(APIView):
             'time': progress,
             'image_url': album_cover,
             'is_playing': is_playing,
-            'votes': 0,
+            'votes': votes,
+            'votes_required': votes_required,
             'id': song_id,
-
         }
-        return Response (song)
-        
+
+        self.update_room_song(room, song_id)
+
+        return Response(song)
+
+
 
 class PauseSongAPIView(APIView):
     def put(self, request):
@@ -201,3 +215,28 @@ class PlaySongAPIView(APIView):
             excute_spotify_api_request(room.host, 'player/pause/', put_= True)
             return Response({}, status = status.HTTP_204_NO_CONTENT)
         return Response ({} ,status = status.HTTP_403_FORBIDDEN)
+
+
+
+class SkipSongAPIView(APIView):
+    def post(self, request):
+        room_code = self.request.session["room_code"]
+        room = Room.objects.filter(code = room_code)[0]
+        votes = Vote.objects.filter(room = room, song_id = room.current_song)
+        votes_needed = room.votes_to_skip
+
+
+        if self.request.session.session_key == room.host or len(votes) + 1 >= votes_needed:
+            for vote in votes:
+                vote.delete()
+            response = excute_spotify_api_request(room.host, 'player/next/', post_= True)
+
+        else: 
+            vote = Vote(
+                guest = self.request.session.session_key,
+                room = room,
+                song_id = room.current_song
+            ).save()
+        return Response({}, status = status.HTTP_204_NO_CONTENT)
+
+

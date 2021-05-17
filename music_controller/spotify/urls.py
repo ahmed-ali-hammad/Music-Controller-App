@@ -10,6 +10,7 @@ urlpatterns = [
     path('current/song/', CurrentSongAPIView.as_view()),
     path('pause/song/', PauseSongAPIView.as_view()),
     path('play/song/', PlaySongAPIView.as_view()),
+    path('skip/song/', SkipSongAPIView.as_view()),
 ]
 
 
